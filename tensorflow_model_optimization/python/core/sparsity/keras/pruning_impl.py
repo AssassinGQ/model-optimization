@@ -106,7 +106,9 @@ class Pruning(object):
       current_threshold = tf.gather(values, k - 1)
       new_mask = tf.dtypes.cast(
           tf.math.greater_equal(abs_weights, current_threshold), weights.dtype)
-    return current_threshold, new_mask
+    return tf.dtypes.cast(
+        current_threshold, dtype=weights.dtype), tf.dtypes.cast(
+            new_mask, dtype=weights.dtype)
 
   def _update_mask_sparsity_m_by_n(self, weights, m_by_n=(2, 4)):
     """Updates the m by n sparsity mask for a given weight tensor.
@@ -221,14 +223,16 @@ class Pruning(object):
     if tf.distribute.get_replica_context():
       values_and_vars = []
       for weight, mask, _ in self._pruning_vars:
-        masked_weight = tf.math.multiply(weight, mask)
+        masked_weight = tf.dtypes.cast(
+            tf.math.multiply(weight, mask), dtype=weight.dtype)
         values_and_vars.append((masked_weight, weight))
       if values_and_vars:
         assign_objs.append(tf.distribute.get_replica_context().merge_call(
             update_fn, args=(values_and_vars,)))
     else:
       for weight, mask, _ in self._pruning_vars:
-        masked_weight = tf.math.multiply(weight, mask)
+        masked_weight = tf.dtypes.cast(
+            tf.math.multiply(weight, mask), dtype=weight.dtype)
         assign_objs.append(tf_compat.assign(weight, masked_weight))
 
     return assign_objs
